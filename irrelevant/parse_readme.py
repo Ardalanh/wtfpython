@@ -2,13 +2,19 @@
 
 """
 This inefficient module would parse the README.md in the initial version of
-WTFPython, and enabl me to categorize and reorder a hell lot of examples with
+WTFPython, and enable me to categorize and reorder a hell lot of examples with
 the help of the file `add_categories` (part of which is automatically
 generated).
 
 After the refactor, this module would not work now with necessary updates in
 the code.
 """
+
+try:
+    raw_input          # Python 2
+except NameError:
+    raw_input = input  # Python 3
+    
 
 fname = "README.md"
 snippets = []
@@ -80,6 +86,7 @@ with open("add_categories", "r") as f:
             }
             content.next()
     except StopIteration:
+        pass
 
 for idx, snip in enumerate(snippets):
     snippets[idx]["category"] = snips_by_title[snip["title"]]["category"]

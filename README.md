@@ -1,6 +1,6 @@
 <p align="center"><img src="/images/logo.png" alt=""></p>
-<h1 align="center"> What the f*ck Python! 🐍 </h1>
-<p align="center"> An interesting collection of surprising snippets and lesser-known Python features.</p>
+<h1 align="center">What the f*ck Python! 🐍</h1>
+<p align="center">An interesting collection of surprising snippets and lesser-known Python features.</p>
 
 [![WTFPL 2.0][license-image]][license-url]
 
@@ -77,7 +77,7 @@ So, here we go...
     - [▶ Yes, it exists!](#-yes-it-exists)
     - [▶ Inpinity *](#-inpinity-)
     - [▶ Mangling time! *](#-mangling-time-)
-  - [Section: Miscallaneous](#section-miscallaneous)
+  - [Section: Miscellaneous](#section-miscellaneous)
     - [▶ `+=` is faster](#--is-faster)
     - [▶ Let's make a giant string!](#-lets-make-a-giant-string)
     - [▶ Explicit typecast of strings](#-explicit-typecast-of-strings)
@@ -97,22 +97,22 @@ All the examples are structured like below:
 
 > ### ▶ Some fancy Title *
 > The asterisk at the end of the title indicates the example was not present in the first release and has been recently added.
-> 
+>
 > ```py
 > # Setting up the code.
 > # Preparation for the magic...
 > ```
-> 
+>
 > **Output (Python version):**
 > ```py
 > >>> triggering_statement
 > Probably unexpected output
 > ```
 > (Optional): One line describing the unexpected output.
-> 
-> 
+>
+>
 > #### 💡 Explanation:
-> 
+>
 > * Brief explanation of what's happening and why is it happening.
 >   ```py
 >   Setting up examples for clarification (if necessary)
@@ -200,9 +200,11 @@ Makes sense, right?
 + In the snippets above, strings are implicitly interned. The decision of when to implicitly intern a string is implementation dependent. There are some facts that can be used to guess if a string will be interned or not:
   * All length 0 and length 1 strings are interned.
   * Strings are interned at compile time (`'wtf'` will be interned but `''.join(['w', 't', 'f']` will not be interned)
-  * Strings that are not composed of ASCII letters, digits or underscores, are not interned. This explains why `'wtf!'` was not interned due to `!`.
+  * Strings that are not composed of ASCII letters, digits or underscores, are not interned. This explains why `'wtf!'` was not interned due to `!`. Cpython implementation of this rule can be found [here](https://github.com/python/cpython/blob/3.6/Objects/codeobject.c#L19)
   <img src="/images/string-intern/string_intern.png" alt="">
 + When `a` and `b` are set to `"wtf!"` in the same line, the Python interpreter creates a new object, then references the second variable at the same time. If you do it on separate lines, it doesn't "know" that there's already `wtf!` as an object (because `"wtf!"` is not implicitly interned as per the facts mentioned above). It's a compiler optimization and specifically applies to the interactive environment.
++ Constant folding is a technique for [peephole optimization](https://en.wikipedia.org/wiki/Peephole_optimization) in Python. This means the expression `'a'*20` is replaced by `'aaaaaaaaaaaaaaaaaaaa'` during compilation to reduce few clock cycles during runtime. Constant folding only occurs for strings having length less than 20. (Why? Imagine the size of `.pyc` file generated as a result of the expression `'a'*10**10`). [Here's](https://github.com/python/cpython/blob/3.6/Python/peephole.c#L288) the implementation source for the same.
+
 
 ---
 
@@ -239,7 +241,7 @@ some_dict[5] = "Python"
   True
   ```
   **Note:** Objects with different values may also have same hash (known as hash collision).
-* When the statement `some_dict[5] = "Python"` is executed, the existing value "JavaScript" is overwritten with "Python" because Python recongnizes `5` and `5.0` as the same keys of the dictionary `some_dict`.
+* When the statement `some_dict[5] = "Python"` is executed, the existing value "JavaScript" is overwritten with "Python" because Python recognizes `5` and `5.0` as the same keys of the dictionary `some_dict`.
 * This StackOverflow [answer](https://stackoverflow.com/a/32211042/4354153) explains beautifully the rationale behind it.
 
 ---
@@ -364,6 +366,7 @@ for i, some_dict[i] in enumerate(some_string):
 
 ### ▶ Evaluation time discrepancy
 
+1\.
 ```py
 array = [1, 8, 15]
 g = (x for x in array if array.count(x) > 0)
@@ -376,10 +379,34 @@ array = [2, 8, 22]
 [8]
 ```
 
+2\.
+
+```py
+array_1 = [1,2,3,4]
+g1 = (x for x in array_1)
+array_1 = [1,2,3,4,5]
+
+array_2 = [1,2,3,4]
+g2 = (x for x in array_2)
+array_2[:] = [1,2,3,4,5]
+```
+
+**Output:**
+```py
+>>> print(list(g1))
+[1,2,3,4]
+
+>>> print(list(g2))
+[1,2,3,4,5]
+```
+
 #### 💡 Explanation
 
 - In a [generator](https://wiki.python.org/moin/Generators) expression, the `in` clause is evaluated at declaration time, but the conditional clause is evaluated at runtime.
 - So before runtime, `array` is re-assigned to the list `[2, 8, 22]`, and since out of `1`, `8` and `15`, only the count of `8` is greater than `0`, the generator only yields `8`.
+- The differences in the output of `g1` and `g2` in the second part is due the way variables `array_1` and `array_2` are re-assigned values.
+- In the first case, `array_1` is binded to the new object `[1,2,3,4,5]` and since the `in` clause is evaluated at the declaration time it still refers to the old object `[1,2,3,4]` (which is not destroyed).
+- In the second case, the slice assignment to `array_2` updates the same old object `[1,2,3,4]` to `[1,2,3,4,5]`. Hence both the `g2` and `array_2` still have reference to the same object (which has now been updated to `[1,2,3,4,5]`).
 
 ---
 
@@ -499,6 +526,15 @@ When we initialize `row` variable, this visualization explains what happens in t
 And when the `board` is initialized by multiplying the `row`, this is what happens inside the memory (each of the elements `board[0]`, `board[1]` and `board[2]` is a reference to the same list referred by `row`)
 
 ![image](/images/tic-tac-toe/after_board_initialized.png)
+
+We can avoid this scenario here by not using `row` variable to generate `board`. (Asked in [this](https://github.com/satwikkansal/wtfpython/issues/68) issue).
+
+```py
+>>> board = [['']*3 for _ in range(3)]
+>>> board[0][0] = "X"
+>>> board
+[['X', '', ''], ['', '', ''], ['', '', '']]
+```
 
 ---
 
@@ -1099,7 +1135,7 @@ str
             and type(other) is SomeClass
             and super().__eq__(other)
         )
-    
+
     # When we define a custom __eq__, Python stops automatically inheriting the
     # __hash__ method, so we need to define it as well
     __hash__ = str.__hash__
@@ -1112,7 +1148,7 @@ str
   >>> s = SomeClass('s')
   >>> some_dict[s] = 40
   >>> some_dict
-  {'s': 40}
+  {'s': 40, 's': 42}
   >>> keys = list(some_dict.keys())
   >>> type(keys[0]), type(keys[1])
   (__main__.SomeClass, str)
@@ -1277,7 +1313,7 @@ Shouldn't that be 100?
   > First, tabs are replaced (from left to right) by one to eight spaces such that the total number of characters up to and including the replacement is a multiple of eight <...>
 * So the "tab" at the last line of `square` function is replaced with eight spaces, and it gets into the loop.
 * Python 3 is kind enough to throw an error for such cases automatically.
-    
+
     **Output (Python 3.x):**
     ```py
     TabError: inconsistent use of tabs and spaces in indentation
@@ -1661,7 +1697,7 @@ a += [5, 6, 7, 8]
 
 * The expression `a = a + [5,6,7,8]` generates a new list and sets `a`'s reference to that new list, leaving `b` unchanged.
 
-* The expression `a + =[5,6,7,8]` is actually mapped to an "extend" function that operates on the list such that `a` and `b` still point to the same list that has been modified in-place.
+* The expression `a += [5,6,7,8]` is actually mapped to an "extend" function that operates on the list such that `a` and `b` still point to the same list that has been modified in-place.
 
 ---
 
@@ -1695,7 +1731,7 @@ UnboundLocalError: local variable 'a' referenced before assignment
       a += 1
       return a
   ```
-  
+
   **Output:**
   ```py
   >>> another_func()
@@ -2079,7 +2115,7 @@ AttributeError: 'Yo' object has no attribute '__honey'
 True
 ```
 
-Why did `Yo()._Yo__honey` worked? Only Indian readers would understand.
+Why did `Yo()._Yo__honey` work? Only Indian readers would understand.
 
 #### 💡 Explanation:
 
@@ -2091,7 +2127,7 @@ Why did `Yo()._Yo__honey` worked? Only Indian readers would understand.
 
 ---
 
-## Section: Miscallaneous
+## Section: Miscellaneous
 
 
 ### ▶ `+=` is faster
@@ -2236,7 +2272,7 @@ nan
 ### ▶ Minor Ones
 
 * `join()` is a string operation instead of list operation. (sort of counter-intuitive at first usage)
-  
+
   **💡 Explanation:**
   If `join()` is a method on a string then it can operate on any iterable (list, tuple, iterators). If it were a method on a list, it'd have to be implemented separately by every type. Also, it doesn't make much sense to put a string-specific method on a generic `list` object API.
 
@@ -2329,12 +2365,12 @@ The idea and design for this collection were initially inspired by Denys Dovhan'
 
 If you have any wtfs, ideas or suggestions, please share.
 
-## Want to share wtfpython with friends?
+## Want to surprise your geeky pythonist friends?
 
-You can use these quick links for Twitter and Linkedin.
+You can recommend wtfpython to your friends on Twitter and Linkedin by using these quick links,
 
-[Twitter](https://twitter.com/intent/tweet?url=https://github.com/satwikkansal/wtfpython&hastags=python,wtfpython) | 
-[Linkedin](https://www.linkedin.com/shareArticle?url=https://github.com/satwikkansal&title=What%20the%20f*ck%20Python!&summary=An%20interesting%20collection%20of%20subtle%20and%20tricky%20Python%20snippets.)
+[Twitter](https://twitter.com/intent/tweet?url=https://github.com/satwikkansal/wtfpython&hastags=python,wtfpython)
+ | [Linkedin](https://www.linkedin.com/shareArticle?url=https://github.com/satwikkansal&title=What%20the%20f*ck%20Python!&summary=An%20interesting%20collection%20of%20subtle%20and%20tricky%20Python%20snippets.)
 
 ## Need a pdf version?
 
